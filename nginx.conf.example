@@ -1,0 +1,176 @@
+# Load Balancer Configuration Example
+# This is an example nginx configuration for routing traffic to microservices
+
+upstream login_service {
+    server localhost:3001;
+}
+
+upstream register_service {
+    server localhost:3002;
+}
+
+upstream song_list_service {
+    server localhost:3003;
+}
+
+upstream song_add_service {
+    server localhost:3004;
+}
+
+upstream song_delete_service {
+    server localhost:3005;
+}
+
+upstream cart_add_service {
+    server localhost:3006;
+}
+
+upstream cart_remove_service {
+    server localhost:3007;
+}
+
+upstream cart_view_service {
+    server localhost:3008;
+}
+
+upstream client_list_service {
+    server localhost:3009;
+}
+
+upstream client_add_service {
+    server localhost:3010;
+}
+
+upstream client_delete_service {
+    server localhost:3011;
+}
+
+server {
+    listen 8080;
+    server_name localhost;
+
+    # CORS headers
+    add_header 'Access-Control-Allow-Origin' '*' always;
+    add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS' always;
+    add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
+
+    # Handle preflight requests
+    if ($request_method = 'OPTIONS') {
+        add_header 'Access-Control-Allow-Origin' '*';
+        add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS';
+        add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization';
+        add_header 'Access-Control-Max-Age' 1728000;
+        add_header 'Content-Type' 'text/plain; charset=utf-8';
+        add_header 'Content-Length' 0;
+        return 204;
+    }
+
+    # Authentication routes
+    location /login/ {
+        rewrite ^/login/(.*)$ /$1 break;
+        proxy_pass http://login_service;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /register/ {
+        rewrite ^/register/(.*)$ /$1 break;
+        proxy_pass http://register_service;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Song management routes
+    location /songs/ {
+        rewrite ^/songs/(.*)$ /$1 break;
+        proxy_pass http://song_list_service;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /songs-add/ {
+        rewrite ^/songs-add/(.*)$ /$1 break;
+        proxy_pass http://song_add_service;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /songs-delete/ {
+        rewrite ^/songs-delete/(.*)$ /$1 break;
+        proxy_pass http://song_delete_service;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Cart management routes
+    location /cart-add/ {
+        rewrite ^/cart-add/(.*)$ /$1 break;
+        proxy_pass http://cart_add_service;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /cart-remove/ {
+        rewrite ^/cart-remove/(.*)$ /$1 break;
+        proxy_pass http://cart_remove_service;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /cart-view/ {
+        rewrite ^/cart-view/(.*)$ /$1 break;
+        proxy_pass http://cart_view_service;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Client management routes
+    location /clients/ {
+        rewrite ^/clients/(.*)$ /$1 break;
+        proxy_pass http://client_list_service;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /clients-add/ {
+        rewrite ^/clients-add/(.*)$ /$1 break;
+        proxy_pass http://client_add_service;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /clients-delete/ {
+        rewrite ^/clients-delete/(.*)$ /$1 break;
+        proxy_pass http://client_delete_service;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Health check endpoint
+    location /health {
+        return 200 "OK";
+        add_header Content-Type text/plain;
+    }
+}
