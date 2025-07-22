@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { authService } from '../services/api';
-import { decodeJWT, isTokenExpired } from '../utils/jwt';
 import type { User } from '../types';
+import { extractUserFromToken, isTokenExpired } from '../utils/jwt';
 
 interface AuthContextType {
     isAuthenticated: boolean;
@@ -41,16 +41,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
             if (storedToken && storedUser) {
                 try {
-                    // Check if token is expired before making API call
-                    if (isTokenExpired(storedToken)) {
-                        localStorage.removeItem('token');
-                        localStorage.removeItem('user');
-                        setLoading(false);
-                        return;
-                    }
-
-                    const isValid = await authService.validateToken();
-                    if (isValid) {
+                    // Check if token is expired
+                    if (!isTokenExpired(storedToken)) {
                         setToken(storedToken);
                         setUser(JSON.parse(storedUser));
                         setIsAuthenticated(true);
@@ -72,35 +64,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const login = async (email: string, password: string) => {
         try {
+            console.log('Starting login process...');
             const response = await authService.login({ email, password });
+            console.log('Login response:', response);
 
             if (response.success && response.data?.accessToken) {
                 const userToken = response.data.accessToken;
+                console.log('Token received, extracting user data...');
+                const userData = extractUserFromToken(userToken);
+                console.log('Extracted user data:', userData);
 
-                // Decode JWT to get user info using helper function
-                const tokenPayload = decodeJWT(userToken);
-                if (!tokenPayload) {
-                    throw new Error('Invalid token received');
+                if (userData) {
+                    localStorage.setItem('token', userToken);
+                    localStorage.setItem('user', JSON.stringify(userData));
+
+                    setToken(userToken);
+                    setUser(userData);
+                    setIsAuthenticated(true);
+                    console.log('Login successful, user authenticated');
+                } else {
+                    throw new Error('Invalid token: could not extract user data');
                 }
-
-                const userData: User = {
-                    id: tokenPayload.userId,
-                    first_name: tokenPayload.firstName,
-                    last_name: tokenPayload.lastName,
-                    email: tokenPayload.email
-                };
-
-                localStorage.setItem('token', userToken);
-                localStorage.setItem('user', JSON.stringify(userData));
-
-                setToken(userToken);
-                setUser(userData);
-                setIsAuthenticated(true);
             } else {
-                throw new Error('Login failed');
+                throw new Error(`Login failed: ${response.message || 'Unknown error'}`);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Login error:', error);
+            // Clear any partial state
+            setToken(null);
+            setUser(null);
+            setIsAuthenticated(false);
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
             throw error;
         }
     };
@@ -109,28 +104,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
             const response = await authService.register(userData);
 
-            if (response.success && response.data?.accessToken) {
+            if (response.success && response.data.accessToken) {
                 const userToken = response.data.accessToken;
+                const user = extractUserFromToken(userToken);
 
-                // Decode JWT to get user info using helper function
-                const tokenPayload = decodeJWT(userToken);
-                if (!tokenPayload) {
-                    throw new Error('Invalid token received');
+                if (user) {
+                    localStorage.setItem('token', userToken);
+                    localStorage.setItem('user', JSON.stringify(user));
+
+                    setToken(userToken);
+                    setUser(user);
+                    setIsAuthenticated(true);
+                } else {
+                    throw new Error('Invalid token: could not extract user data');
                 }
-
-                const userInfo: User = {
-                    id: tokenPayload.userId,
-                    first_name: tokenPayload.firstName,
-                    last_name: tokenPayload.lastName,
-                    email: tokenPayload.email
-                };
-
-                localStorage.setItem('token', userToken);
-                localStorage.setItem('user', JSON.stringify(userInfo));
-
-                setToken(userToken);
-                setUser(userInfo);
-                setIsAuthenticated(true);
             } else {
                 throw new Error('Registration failed');
             }

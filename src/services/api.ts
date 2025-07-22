@@ -1,6 +1,5 @@
-import axios, { type AxiosResponse } from 'axios';
+import axios from 'axios';
 import type {
-    User,
     LoginRequest,
     RegisterRequest,
     AuthResponse,
@@ -11,31 +10,42 @@ import type {
     ClientListResponse
 } from '../types';
 
-// Create axios instance with interceptors
+// API Base Configuration
 const api = axios.create({
-    timeout: 10000,
+    timeout: 30000, // Aumentado a 30 segundos
+    headers: {
+        'Content-Type': 'application/json',
+    },
 });
 
 // Request interceptor to add auth token
-api.interceptors.request.use(
-    (config) => {
-        const token = localStorage.getItem('token');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error) => {
-        return Promise.reject(error);
+api.interceptors.request.use((config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
     }
-);
 
-// Response interceptor to handle errors
+    // Agregar logs para debug
+    console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    return config;
+}, (error) => {
+    console.error('Request interceptor error:', error);
+    return Promise.reject(error);
+});
+
+// Response interceptor for error handling
 api.interceptors.response.use(
-    (response: AxiosResponse) => {
+    (response) => {
+        console.log(`API Response: ${response.status} ${response.config.url}`);
         return response;
     },
     (error) => {
+        console.error('API Error:', error);
+
+        if (error.code === 'ECONNABORTED') {
+            console.error('Request timeout - service may be down');
+        }
+
         if (error.response?.status === 401) {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
@@ -59,6 +69,10 @@ export const authService = {
 
     async validateToken(): Promise<boolean> {
         try {
+            // First check if token exists
+            const token = localStorage.getItem('token');
+            if (!token) return false;
+
             const response = await api.post(`${import.meta.env.VITE_LOGIN_SERVICE_URL}/api/auth/validate`);
             return response.data.success;
         } catch {
@@ -73,39 +87,59 @@ export const authService = {
     }
 };
 
-// Función para normalizar datos de canciones y agregar propiedades de compatibilidad
-const normalizeSong = (song: any): Song => {
-    return {
-        ...song,
-        // Propiedades de compatibilidad
-        artist: song.artist_name || song.artist || 'Unknown Artist',
-        cover: song.album_cover_big || song.cover,
-    };
-};
-
 // Songs Service
 export const songsService = {
     async getAllSongs(): Promise<Song[]> {
         try {
+            console.log('Fetching songs from:', import.meta.env.VITE_SONG_LIST_SERVICE_URL);
             const response = await api.get(`${import.meta.env.VITE_SONG_LIST_SERVICE_URL}/api/songs`);
             const songs = response.data.songs || response.data || [];
 
             // Normalizar cada canción para que tenga propiedades consistentes
-            return songs.map(normalizeSong);
-        } catch (error) {
+            return songs.map((song: any) => ({
+                ...song,
+                // Propiedades de compatibilidad
+                artist: song.artist_name || song.artist || 'Unknown Artist',
+                cover: song.album_cover_big || song.cover,
+            }));
+        } catch (error: any) {
             console.error('Error fetching songs:', error);
-            return [];
+
+            if (error.code === 'ECONNABORTED') {
+                throw new Error('Connection timeout - Song service may be unavailable. Please try again later.');
+            }
+
+            if (error.response?.status === 404) {
+                throw new Error('Songs service not found. Please contact support.');
+            }
+
+            if (error.response?.status >= 500) {
+                throw new Error('Song service is experiencing issues. Please try again later.');
+            }
+
+            throw new Error(`Failed to fetch songs: ${error.message}`);
         }
     },
 
     async getSongById(id: string): Promise<Song> {
-        const response = await api.get(`${import.meta.env.VITE_SONG_LIST_SERVICE_URL}/api/songs/${id}`);
-        return normalizeSong(response.data);
+        try {
+            const response = await api.get(`${import.meta.env.VITE_SONG_LIST_SERVICE_URL}/api/songs/${id}`);
+            const song = response.data;
+
+            return {
+                ...song,
+                artist: song.artist_name || song.artist || 'Unknown Artist',
+                cover: song.album_cover_big || song.cover,
+            };
+        } catch (error: any) {
+            console.error('Error fetching song:', error);
+            throw new Error(`Failed to fetch song: ${error.message}`);
+        }
     },
 
     async addSong(songData: Omit<Song, '_id' | 'createdAt'>): Promise<Song> {
         const response = await api.post(`${import.meta.env.VITE_SONG_ADD_SERVICE_URL}/api/songs`, songData);
-        return normalizeSong(response.data);
+        return response.data;
     },
 
     async deleteSong(id: string): Promise<void> {
@@ -117,58 +151,29 @@ export const songsService = {
 export const cartService = {
     async addToCart(item: AddToCartRequest): Promise<CartItem> {
         const response = await api.post(`${import.meta.env.VITE_CART_ADD_SERVICE_URL}/api/cart/add`, item);
-
-        // Manejar diferentes estructuras de respuesta
-        if (response.data.success && response.data.data) {
-            return response.data.data;
-        }
-        return response.data.item || response.data;
+        return response.data.item;
     },
 
-    async removeFromCart(productId: string, quantity?: number): Promise<void> {
+    async removeFromCart(productId: string): Promise<void> {
         await api.delete(`${import.meta.env.VITE_CART_REMOVE_SERVICE_URL}/api/cart/remove`, {
-            data: { productId, quantity: quantity || 1 }
+            data: { productId }
         });
     },
 
     async getCart(): Promise<CartItem[]> {
-        try {
-            const response = await api.get(`${import.meta.env.VITE_CART_VIEW_SERVICE_URL}/api/cart`);
+        console.log('🛒 Fetching cart items...');
+        const response = await api.get(`${import.meta.env.VITE_CART_VIEW_SERVICE_URL}/api/cart`);
+        console.log('🛒 Cart response:', response.data);
 
-            // Manejar diferentes estructuras de respuesta del backend
-            if (response.data.success && response.data.data) {
-                // Si la respuesta tiene success: true y data
-                const cartData = response.data.data;
-                if (Array.isArray(cartData.items)) {
-                    return cartData.items;
-                }
-                if (Array.isArray(cartData)) {
-                    return cartData;
-                }
-            }
-
-            // Si la respuesta tiene cart directamente
-            if (response.data.cart && Array.isArray(response.data.cart.items)) {
-                return response.data.cart.items;
-            }
-
-            // Si la respuesta es directamente un array
-            if (Array.isArray(response.data)) {
-                return response.data;
-            }
-
-            // Si no encuentra items, devolver array vacío
-            console.warn('Unexpected cart response structure:', response.data);
-            return [];
-
-        } catch (error) {
-            console.error('Error fetching cart:', error);
-            return [];
+        // El backend devuelve { success, message, data: { items, total, itemCount } }
+        if (response.data.success && response.data.data) {
+            const items = response.data.data.items || [];
+            console.log('🛒 Extracted cart items:', items);
+            return items;
         }
-    },
 
-    async clearCart(): Promise<void> {
-        await api.delete(`${import.meta.env.VITE_CART_REMOVE_SERVICE_URL}/api/cart/clear`);
+        // Fallback para otras estructuras
+        return response.data.cart || response.data.items || response.data || [];
     }
 };
 

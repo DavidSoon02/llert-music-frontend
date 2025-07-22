@@ -10,25 +10,15 @@ const FeaturedSongCard: React.FC<{ song: Song; onAddToCart: (song: Song) => void
     onAddToCart,
     loading
 }) => {
-    // Validar que song y song.price existan, proporcionar valores por defecto
-    const price = song?.price ?? 0;
-    const title = song?.title ?? 'Unknown Title';
-    const artist = (song?.artist || song?.artist_name) ?? 'Unknown Artist';
-    const cover = song?.cover || song?.album_cover_big;
-
     return (
         <div className="bg-gradient-to-r from-green-500/10 to-purple-500/10 rounded-xl p-6 border border-green-500/20 hover:border-green-500/40 transition-all duration-300">
             <div className="flex items-center space-x-4">
                 <div className="w-20 h-20 bg-gradient-to-br from-green-500/20 to-purple-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                    {cover ? (
+                    {song.cover ? (
                         <img
-                            src={cover}
-                            alt={title}
+                            src={song.cover}
+                            alt={song.title}
                             className="w-full h-full object-cover rounded-lg"
-                            onError={(e) => {
-                                // Si la imagen falla al cargar, mostrar el ícono por defecto
-                                e.currentTarget.style.display = 'none';
-                            }}
                         />
                     ) : (
                         <svg className="w-10 h-10 text-green-400" fill="currentColor" viewBox="0 0 24 24">
@@ -38,11 +28,9 @@ const FeaturedSongCard: React.FC<{ song: Song; onAddToCart: (song: Song) => void
                 </div>
 
                 <div className="flex-1 min-w-0">
-                    <h3 className="text-white font-semibold text-lg truncate">{title}</h3>
-                    <p className="text-gray-400 truncate">{artist}</p>
-                    <p className="text-green-400 font-bold">
-                        ${typeof price === 'number' ? price.toFixed(2) : '0.00'}
-                    </p>
+                    <h3 className="text-white font-semibold text-lg truncate">{song.title}</h3>
+                    <p className="text-gray-400 truncate">{song.artist}</p>
+                    <p className="text-green-400 font-bold">${song.price.toFixed(2)}</p>
                 </div>
 
                 <button
@@ -65,6 +53,7 @@ const Home: React.FC = () => {
     const [featuredSongs, setFeaturedSongs] = useState<Song[]>([]);
     const [loading, setLoading] = useState(true);
     const [addingToCart, setAddingToCart] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
     const { addToCart } = useCart();
     const { user } = useAuth();
 
@@ -75,11 +64,36 @@ const Home: React.FC = () => {
     const fetchFeaturedSongs = async () => {
         try {
             setLoading(true);
+            setError(null);
             const songs = await songsService.getAllSongs();
-            // Get first 6 songs as featured
-            setFeaturedSongs(songs.slice(0, 6));
-        } catch (error) {
+
+            // Validar y filtrar canciones válidas
+            const validSongs = (songs || []).filter(song =>
+                song &&
+                song._id &&
+                song.title &&
+                typeof song.price === 'number'
+            );
+
+            // Get first 6 valid songs as featured
+            setFeaturedSongs(validSongs.slice(0, 6));
+        } catch (error: any) {
             console.error('Failed to fetch featured songs:', error);
+
+            // Mensajes de error más específicos
+            let errorMessage = 'Failed to load featured songs.';
+
+            if (error.message.includes('timeout')) {
+                errorMessage = 'Connection timeout. The music service may be temporarily unavailable.';
+            } else if (error.message.includes('not found')) {
+                errorMessage = 'Music service not available. Please contact support.';
+            } else if (error.message.includes('Network Error')) {
+                errorMessage = 'Network connection error. Please check your internet connection.';
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }
@@ -90,7 +104,7 @@ const Home: React.FC = () => {
             setAddingToCart(song._id);
             await addToCart({
                 productId: song._id,
-                productName: `${song.title} - ${song.artist || song.artist_name}`,
+                productName: `${song.title} - ${song.artist}`,
                 price: song.price,
                 quantity: 1
             });
@@ -109,7 +123,7 @@ const Home: React.FC = () => {
                 <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
                     <div className="text-center">
                         <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
-                            Welcome to <span className="text-green-400">Llert Music</span>
+                            Welcome to <span className="text-green-400">Music Store</span>
                         </h1>
                         <p className="text-xl text-gray-300 mb-8 max-w-3xl mx-auto">
                             Discover, purchase, and enjoy millions of songs from your favorite artists.
@@ -150,6 +164,26 @@ const Home: React.FC = () => {
                     <h2 className="text-3xl font-bold text-white mb-4">Featured Tracks</h2>
                     <p className="text-gray-400">Discover the latest and greatest music</p>
                 </div>
+
+                {error && (
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-8">
+                        <div className="flex items-center space-x-3">
+                            <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <div>
+                                <p className="text-red-400 font-semibold">Service Unavailable</p>
+                                <p className="text-red-300 text-sm">{error}</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={fetchFeaturedSongs}
+                            className="mt-3 bg-red-500/20 hover:bg-red-500/30 text-red-300 hover:text-red-200 px-4 py-2 rounded transition-colors text-sm"
+                        >
+                            Try Again
+                        </button>
+                    </div>
+                )}
 
                 {loading ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -197,7 +231,7 @@ const Home: React.FC = () => {
             <div className="bg-gray-900/50 py-16">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-12">
-                        <h2 className="text-3xl font-bold text-white mb-4">Why Choose Llert Music?</h2>
+                        <h2 className="text-3xl font-bold text-white mb-4">Why Choose Music Store?</h2>
                         <p className="text-gray-400">The best music experience, tailored for you</p>
                     </div>
 
@@ -240,7 +274,7 @@ const Home: React.FC = () => {
                 <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
                     <h2 className="text-3xl font-bold text-white mb-4">Ready to Start Your Musical Journey?</h2>
                     <p className="text-gray-400 text-lg mb-8">
-                        Join thousands of music lovers who trust Llert Music for their audio needs
+                        Join thousands of music lovers who trust Music Store for their audio needs
                     </p>
                     <Link
                         to="/songs"

@@ -7,7 +7,7 @@ Currently, two official plugins are available:
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
 - [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-# 🎵 Llert Music Frontend
+# 🎵 Music Store Frontend
 
 A modern, Spotify-inspired music e-commerce platform built with React, TypeScript, and Tailwind CSS v4.1. This frontend consumes multiple microservices to provide a complete music shopping experience.
 

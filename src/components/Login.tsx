@@ -53,7 +53,7 @@ const Login: React.FC = () => {
                                 <path d="M12 2L13.2 8.6L20 7.4L14.8 12L20 16.6L13.2 15.4L12 22L10.8 15.4L4 16.6L9.2 12L4 7.4L10.8 8.6L12 2Z" />
                             </svg>
                         </div>
-                        <h1 className="text-3xl font-bold text-white mb-2">Llert Music</h1>
+                        <h1 className="text-3xl font-bold text-white mb-2">Music Store</h1>
                         <p className="text-green-400">Welcome back to your music world</p>
                     </div>
 

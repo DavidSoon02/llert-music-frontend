@@ -14,12 +14,14 @@ export interface RegisterRequest {
 export interface AuthResponse {
     success: boolean;
     message: string;
-    data?: {
+    data: {
         accessToken: string;
         expiresIn: string;
         tokenType: string;
     };
-}export interface User {
+}
+
+export interface User {
     id: string;
     first_name: string;
     last_name: string;
@@ -31,16 +33,12 @@ export interface AuthResponse {
 export interface Song {
     _id: string;
     title: string;
-    artist_name: string;  // Actualizado para coincidir con el backend
-    album_title: string;  // Agregado según la respuesta del backend
+    artist: string;
     duration: number;
-    album_cover_big?: string;
+    cover?: string;
     preview?: string;
     price: number;
     createdAt: string;
-    // Propiedades de compatibilidad
-    artist?: string;  // Para compatibilidad con componentes existentes
-    cover?: string;   // Alias para album_cover_big
 }
 
 export interface SongListResponse {

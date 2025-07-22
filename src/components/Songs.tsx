@@ -20,15 +20,11 @@ const SongCard: React.FC<{ song: Song; onAddToCart: (song: Song) => void; loadin
             {/* Album Cover */}
             <div className="relative mb-4">
                 <div className="aspect-square bg-gradient-to-br from-green-500/20 to-purple-500/20 rounded-lg flex items-center justify-center overflow-hidden">
-                    {(song.cover || song.album_cover_big) ? (
+                    {song.cover ? (
                         <img
-                            src={song.cover || song.album_cover_big}
+                            src={song.cover}
                             alt={song.title}
                             className="w-full h-full object-cover"
-                            onError={(e) => {
-                                // Si la imagen falla al cargar, mostrar el ícono por defecto
-                                e.currentTarget.style.display = 'none';
-                            }}
                         />
                     ) : (
                         <svg className="w-16 h-16 text-green-400" fill="currentColor" viewBox="0 0 24 24">
@@ -52,7 +48,7 @@ const SongCard: React.FC<{ song: Song; onAddToCart: (song: Song) => void; loadin
                 <h3 className="text-white font-semibold text-lg mb-1 truncate group-hover:text-green-400 transition-colors">
                     {song.title}
                 </h3>
-                <p className="text-gray-400 text-sm truncate">{song.artist || song.artist_name}</p>
+                <p className="text-gray-400 text-sm truncate">{song.artist}</p>
                 <p className="text-gray-500 text-xs mt-1">{formatDuration(song.duration)}</p>
             </div>
 
@@ -115,14 +111,14 @@ const Songs: React.FC = () => {
             setAddingToCart(song._id);
             await addToCart({
                 productId: song._id,
-                productName: `${song.title} - ${song.artist || song.artist_name}`,
+                productName: `${song.title} - ${song.artist}`,
                 price: song.price,
                 quantity: 1
             });
             addNotification({
                 type: 'success',
                 title: 'Added to Cart',
-                message: `${song.title} by ${song.artist || song.artist_name} has been added to your cart.`,
+                message: `${song.title} by ${song.artist} has been added to your cart.`,
             });
         } catch (error) {
             console.error('Failed to add to cart:', error);
@@ -139,21 +135,21 @@ const Songs: React.FC = () => {
     const filteredAndSortedSongs = songs
         .filter(song =>
             song.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (song.artist || song.artist_name || '').toLowerCase().includes(searchTerm.toLowerCase())
+            song.artist.toLowerCase().includes(searchTerm.toLowerCase())
         )
         .sort((a, b) => {
-            let aValue = a[sortBy as keyof Song];
-            let bValue = b[sortBy as keyof Song];
+            let aValue = a[sortBy];
+            let bValue = b[sortBy];
 
-            if (typeof aValue === 'string' && typeof bValue === 'string') {
+            if (typeof aValue === 'string') {
                 aValue = aValue.toLowerCase();
-                bValue = bValue.toLowerCase();
+                bValue = (bValue as string).toLowerCase();
             }
 
             if (sortOrder === 'asc') {
-                return (aValue || 0) > (bValue || 0) ? 1 : -1;
+                return aValue > bValue ? 1 : -1;
             } else {
-                return (aValue || 0) < (bValue || 0) ? 1 : -1;
+                return aValue < bValue ? 1 : -1;
             }
         });
 

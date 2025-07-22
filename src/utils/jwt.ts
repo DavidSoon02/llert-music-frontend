@@ -1,40 +1,50 @@
-// JWT Helper functions
-export const decodeJWT = (token: string) => {
+import type { User } from '../types';
+
+export interface JWTPayload {
+    userId: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    iat: number;
+    exp: number;
+}
+
+export const decodeJWT = (token: string): JWTPayload | null => {
     try {
-        const base64Url = token.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(
-            atob(base64)
-                .split('')
-                .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-                .join('')
-        );
-        return JSON.parse(jsonPayload);
+        const parts = token.split('.');
+        if (parts.length !== 3) {
+            return null;
+        }
+
+        const payload = parts[1];
+        const decodedPayload = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+        return JSON.parse(decodedPayload) as JWTPayload;
     } catch (error) {
         console.error('Error decoding JWT:', error);
         return null;
     }
 };
 
-export const isTokenExpired = (token: string): boolean => {
-    try {
-        const decoded = decodeJWT(token);
-        if (!decoded || !decoded.exp) return true;
-
-        const currentTime = Date.now() / 1000;
-        return decoded.exp < currentTime;
-    } catch {
-        return true;
-    }
-};
-
-export const getTokenExpirationTime = (token: string): Date | null => {
-    try {
-        const decoded = decodeJWT(token);
-        if (!decoded || !decoded.exp) return null;
-
-        return new Date(decoded.exp * 1000);
-    } catch {
+export const extractUserFromToken = (token: string): User | null => {
+    const payload = decodeJWT(token);
+    if (!payload) {
         return null;
     }
+
+    return {
+        id: payload.userId,
+        first_name: payload.firstName,
+        last_name: payload.lastName,
+        email: payload.email,
+    };
+};
+
+export const isTokenExpired = (token: string): boolean => {
+    const payload = decodeJWT(token);
+    if (!payload) {
+        return true;
+    }
+
+    const currentTime = Math.floor(Date.now() / 1000);
+    return payload.exp < currentTime;
 };

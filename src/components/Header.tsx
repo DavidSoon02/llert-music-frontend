@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
+import { useAdmin } from '../hooks/useAdmin';
 
 const Header: React.FC = () => {
     const { isAuthenticated, user, logout } = useAuth();
     const { getCartItemsCount } = useCart();
+    const { isAdmin } = useAdmin();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const navigate = useNavigate();
 
@@ -27,7 +29,7 @@ const Header: React.FC = () => {
                                 <path d="M12 2L13.2 8.6L20 7.4L14.8 12L20 16.6L13.2 15.4L12 22L10.8 15.4L4 16.6L9.2 12L4 7.4L10.8 8.6L12 2Z" />
                             </svg>
                         </div>
-                        <span className="text-xl font-bold text-white">Llert Music</span>
+                        <span className="text-xl font-bold text-white">Music Store</span>
                     </Link>
 
                     {/* Navigation Links - Desktop */}
@@ -90,6 +92,18 @@ const Header: React.FC = () => {
                                     {/* Dropdown Menu */}
                                     {isMenuOpen && (
                                         <div className="absolute right-0 mt-2 w-48 bg-gray-900 rounded-lg shadow-lg border border-gray-700 py-2">
+                                            {isAdmin && (
+                                                <>
+                                                    <Link
+                                                        to="/admin"
+                                                        className="block px-4 py-2 text-sm text-purple-400 hover:bg-gray-800 hover:text-purple-300 transition-colors font-medium"
+                                                        onClick={() => setIsMenuOpen(false)}
+                                                    >
+                                                        🛠️ Admin Panel
+                                                    </Link>
+                                                    <div className="border-t border-gray-700 my-2"></div>
+                                                </>
+                                            )}
                                             <Link
                                                 to="/profile"
                                                 className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
@@ -153,6 +167,18 @@ const Header: React.FC = () => {
                 {isMenuOpen && isAuthenticated && (
                     <div className="md:hidden py-4 border-t border-gray-700">
                         <nav className="space-y-2">
+                            {isAdmin && (
+                                <>
+                                    <Link
+                                        to="/admin"
+                                        className="block py-2 text-purple-400 hover:text-purple-300 transition-colors font-medium"
+                                        onClick={() => setIsMenuOpen(false)}
+                                    >
+                                        🛠️ Admin Panel
+                                    </Link>
+                                    <div className="border-t border-gray-700 my-2"></div>
+                                </>
+                            )}
                             <Link
                                 to="/"
                                 className="block py-2 text-gray-300 hover:text-green-400 transition-colors"

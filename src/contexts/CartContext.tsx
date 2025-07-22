@@ -38,11 +38,14 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         if (!isAuthenticated) return;
 
         try {
+            console.log('🛒 CartContext: Starting refreshCart...');
             setLoading(true);
             const cartItems = await cartService.getCart();
+            console.log('🛒 CartContext: Received cart items:', cartItems);
             setItems(cartItems);
+            console.log('🛒 CartContext: Items state updated');
         } catch (error) {
-            console.error('Failed to fetch cart:', error);
+            console.error('🛒 CartContext: Failed to fetch cart:', error);
         } finally {
             setLoading(false);
         }
@@ -58,11 +61,13 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
 
     const addToCart = async (item: AddToCartRequest) => {
         try {
+            console.log('🛒 CartContext: Adding item to cart:', item);
             setLoading(true);
             await cartService.addToCart(item);
+            console.log('🛒 CartContext: Item added successfully, refreshing cart...');
             await refreshCart();
         } catch (error) {
-            console.error('Failed to add to cart:', error);
+            console.error('🛒 CartContext: Failed to add to cart:', error);
             throw error;
         } finally {
             setLoading(false);
@@ -87,11 +92,39 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     };
 
     const getCartTotal = () => {
-        return items.reduce((total, item) => total + (item.price * item.quantity), 0);
+        try {
+            if (!Array.isArray(items)) {
+                console.warn('Cart items is not an array:', items);
+                return 0;
+            }
+            return items.reduce((total, item) => {
+                if (item && typeof item.price === 'number' && typeof item.quantity === 'number') {
+                    return total + (item.price * item.quantity);
+                }
+                return total;
+            }, 0);
+        } catch (error) {
+            console.error('Error calculating cart total:', error);
+            return 0;
+        }
     };
 
     const getCartItemsCount = () => {
-        return items.reduce((count, item) => count + item.quantity, 0);
+        try {
+            if (!Array.isArray(items)) {
+                console.warn('Cart items is not an array:', items);
+                return 0;
+            }
+            return items.reduce((count, item) => {
+                if (item && typeof item.quantity === 'number') {
+                    return count + item.quantity;
+                }
+                return count;
+            }, 0);
+        } catch (error) {
+            console.error('Error calculating cart items count:', error);
+            return 0;
+        }
     };
 
     const value = {

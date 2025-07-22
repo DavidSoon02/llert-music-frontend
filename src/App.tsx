@@ -3,12 +3,18 @@ import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminRoute from './components/AdminRoute';
 import Layout from './components/Layout';
 import Login from './components/Login';
 import Register from './components/Register';
 import Home from './components/Home';
 import Songs from './components/Songs';
 import Cart from './components/Cart';
+import AdminDashboard from './components/AdminDashboard';
+import AdminSongs from './components/AdminSongs';
+import AdminClients from './components/AdminClients';
+import ServiceDebug from './components/ServiceDebug';
+import AuthDebug from './components/AuthDebug';
 
 function App() {
   return (
@@ -20,6 +26,29 @@ function App() {
               {/* Public Routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+
+              {/* Admin Routes */}
+              <Route path="/admin" element={
+                <ProtectedRoute>
+                  <AdminRoute>
+                    <AdminDashboard />
+                  </AdminRoute>
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/songs" element={
+                <ProtectedRoute>
+                  <AdminRoute>
+                    <AdminSongs />
+                  </AdminRoute>
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/clients" element={
+                <ProtectedRoute>
+                  <AdminRoute>
+                    <AdminClients />
+                  </AdminRoute>
+                </ProtectedRoute>
+              } />
 
               {/* Protected Routes */}
               <Route
@@ -41,6 +70,10 @@ function App() {
               {/* Fallback */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+
+            {/* Debug components - solo en desarrollo */}
+            <ServiceDebug />
+            <AuthDebug />
           </Router>
         </CartProvider>
       </AuthProvider>
